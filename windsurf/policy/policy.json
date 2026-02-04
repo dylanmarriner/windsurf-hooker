@@ -1,0 +1,23 @@
+{
+  "block_commands_regex": [],
+  "mcp_tool_allowlist": [
+    "search_code",
+    "list_files",
+    "read_file",
+    "get_definition",
+    "list_pull_requests",
+    "get_pull_request",
+    "list_issues",
+    "get_issue"
+  ],
+  "tokens": {
+    "audit_ok": "[AUDIT_OK]",
+    "repair_ok": "[REPAIR_OK]",
+    "ship_ok": "[SHIP:GATES_OK]"
+  },
+  "prohibited_patterns": {
+    "placeholders": ["TODO", "FIXME", "XXX", "pass", "...", "unimplemented", "stub"],
+    "mock_artifacts": ["mock data", "fake data", "demo data", "hardcoded test"],
+    "assumptions_and_hacks": ["assume", "temporary", "for now", "hack", "workaround"]
+  }
+}

@@ -1,0 +1,28 @@
+#!/bin/bash
+# One-time initialization - call this after cloning
+# Usage: ./init
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_HOOKS_DIR="${REPO_DIR}/.git/hooks"
+
+echo "[INFO] Initializing windsurf-hooker..."
+
+# Create hooks directory
+mkdir -p "$GIT_HOOKS_DIR"
+
+# Install hooks from .githooks
+cp "${REPO_DIR}/.githooks/post-checkout" "$GIT_HOOKS_DIR/post-checkout"
+cp "${REPO_DIR}/.githooks/post-merge" "$GIT_HOOKS_DIR/post-merge"
+
+# Make hooks executable
+chmod +x "$GIT_HOOKS_DIR/post-checkout"
+chmod +x "$GIT_HOOKS_DIR/post-merge"
+chmod +x "${REPO_DIR}/deploy.sh"
+
+echo "[INFO] Initialization complete!"
+echo "[INFO] Running initial deployment..."
+
+# Run first deployment
+sudo "${REPO_DIR}/deploy.sh"

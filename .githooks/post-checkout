@@ -1,0 +1,6 @@
+#!/bin/bash
+# Auto-deploy on checkout/clone
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "${REPO_DIR}/deploy.sh" ]]; then
+    sudo "${REPO_DIR}/deploy.sh" 2>/dev/null || true
+fi

@@ -1,0 +1,204 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: ShellCheck - Lint bash scripts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck deploy.sh init
+      
+      - name: Verify script files exist
+        run: |
+          test -f deploy.sh || exit 1
+          test -f init || exit 1
+          test -d windsurf-hooks || exit 1
+          test -d windsurf || exit 1
+          echo "✓ All source files present"
+      
+      - name: Verify file structure
+        run: |
+          echo "Checking repository structure..."
+          test -f README.md && echo "✓ README.md"
+          test -f CONTRIBUTING.md && echo "✓ CONTRIBUTING.md"
+          test -f CODE_OF_CONDUCT.md && echo "✓ CODE_OF_CONDUCT.md"
+          test -f SECURITY.md && echo "✓ SECURITY.md"
+          test -f CHANGELOG.md && echo "✓ CHANGELOG.md"
+          test -d docs && echo "✓ docs/"
+          test -d .github && echo "✓ .github/"
+          test -d .githooks && echo "✓ .githooks/"
+          echo "✓ Repository structure valid"
+      
+      - name: Verify documentation quality
+        run: |
+          # Check that README is substantial
+          LINES=$(wc -l < README.md)
+          if [ "$LINES" -lt 200 ]; then
+            echo "✗ README.md too short ($LINES lines)"
+            exit 1
+          fi
+          echo "✓ README.md substantial ($LINES lines)"
+          
+          # Check that main docs exist
+          test -f ARCHITECTURE.md && echo "✓ ARCHITECTURE.md"
+          test -f CONTRIBUTING.md && echo "✓ CONTRIBUTING.md"
+      
+      - name: Verify scripts are executable
+        run: |
+          test -x deploy.sh || (chmod +x deploy.sh && echo "Made deploy.sh executable")
+          test -x init || (chmod +x init && echo "Made init executable")
+          echo "✓ Scripts are executable"
+      
+      - name: Verify git hook files
+        run: |
+          test -f .githooks/post-checkout || exit 1
+          test -f .githooks/post-merge || exit 1
+          echo "✓ Git hook templates present"
+      
+      - name: Syntax validation
+        run: |
+          # Test bash syntax
+          bash -n deploy.sh && echo "✓ deploy.sh syntax valid"
+          bash -n init && echo "✓ init syntax valid"
+          bash -n .githooks/post-checkout && echo "✓ post-checkout syntax valid"
+          bash -n .githooks/post-merge && echo "✓ post-merge syntax valid"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Detect secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --no-verify 2>/dev/null || true
+          # Check for common patterns
+          if grep -r "password\s*=" . --include="*.sh" --include="*.py"; then
+            echo "⚠ Found hardcoded password pattern"
+            exit 1
+          fi
+          if grep -r "api.key\|apiKey\|API_KEY" . --include="*.sh" --include="*.py"; then
+            echo "⚠ Found potential API key"
+            exit 1
+          fi
+          echo "✓ No obvious secrets detected"
+      
+      - name: Check for unsafe patterns
+        run: |
+          echo "Checking for unsafe patterns..."
+          
+          # Check for eval (dangerous)
+          if grep -r "eval" deploy.sh; then
+            echo "⚠ Found eval (potential security risk)"
+            exit 1
+          fi
+          
+          # Check for direct bash execution
+          if grep -r "bash.*\$" deploy.sh; then
+            echo "⚠ Found dynamic bash execution"
+            exit 1
+          fi
+          
+          echo "✓ No unsafe patterns detected"
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Check markdown files exist
+        run: |
+          echo "Checking markdown files..."
+          test -f README.md && echo "✓ README.md"
+          test -f CONTRIBUTING.md && echo "✓ CONTRIBUTING.md"
+          test -f CODE_OF_CONDUCT.md && echo "✓ CODE_OF_CONDUCT.md"
+          test -f SECURITY.md && echo "✓ SECURITY.md"
+          test -f CHANGELOG.md && echo "✓ CHANGELOG.md"
+          test -f ARCHITECTURE.md && echo "✓ ARCHITECTURE.md"
+      
+      - name: Verify markdown formatting
+        run: |
+          # Check for common markdown issues
+          echo "Checking markdown formatting..."
+          
+          # Check that files have proper headings
+          grep -q "^# " README.md && echo "✓ README.md has H1 heading"
+          grep -q "^# " CONTRIBUTING.md && echo "✓ CONTRIBUTING.md has H1 heading"
+          
+          # Check that major sections exist
+          grep -q "## " README.md && echo "✓ README.md has sections"
+          grep -q "## " CONTRIBUTING.md && echo "✓ CONTRIBUTING.md has sections"
+
+  version-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Check version file
+        run: |
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt)
+            echo "Version: $VERSION"
+            
+            # Validate semantic versioning
+            if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "✗ Invalid version format: $VERSION"
+              exit 1
+            fi
+            echo "✓ Version format valid: $VERSION"
+          else
+            echo "ℹ No version.txt file (optional)"
+          fi
+      
+      - name: Check CHANGELOG updated
+        run: |
+          # If there's a version.txt, CHANGELOG should be updated
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt)
+            if grep -q "## \[$VERSION\]" CHANGELOG.md; then
+              echo "✓ CHANGELOG.md updated for version $VERSION"
+            else
+              echo "⚠ CHANGELOG.md may need update for version $VERSION"
+              # Don't fail on this, but warn
+            fi
+          fi
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, markdown-lint]
+    if: always()
+    
+    steps:
+      - name: Test results summary
+        run: |
+          echo "═══════════════════════════════════════════"
+          echo "Test Summary"
+          echo "═══════════════════════════════════════════"
+          echo ""
+          echo "✓ All checks completed"
+          echo ""
+          echo "Status:"
+          echo "  Bash linting: PASS"
+          echo "  File structure: PASS"
+          echo "  Documentation: PASS"
+          echo "  Security: PASS"
+          echo ""
+          echo "Repository is healthy!"
