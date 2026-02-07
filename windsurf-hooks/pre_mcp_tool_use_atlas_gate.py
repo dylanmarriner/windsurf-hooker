@@ -3,50 +3,52 @@
 pre_mcp_tool_use_atlas_gate: ATLAS-GATE Primary Gate (Hard Choke Point)
 
 Core Invariant (Non-Negotiable):
-- If a capability is not routed through ATLAS-GATE, it must be impossible
+- If a capability is not routed through ATLAS-GATE MCP tools, it is impossible
 - No soft allow + warning
 - No fallback paths
 - No silent success
-- Everything funnels through one MCP surface
-
-This hook implements the hard boundary. It is the kernel.
-ATLAS-GATE is the only permitted syscall table.
 
 Behavior:
-1. Reject any tool not prefixed with "atlas_gate."
-2. Reject missing or malformed ATLAS-GATE payloads
-3. Reject attempts to smuggle execution via arguments
-4. Validate schema for each ATLAS-GATE operation
+1. Reject any tool that is not an ATLAS-GATE MCP tool
+2. Enforce policy allowlist when configured
+3. Enforce panic-lock mode (execution_profile=locked)
 
-Invariant:
-If this hook is bypassed, the system is compromised. No exceptions.
+Note:
+- Windsurf-side hook validates routing/safety boundaries
+- ATLAS-GATE MCP server validates payload schema and authority
 """
 
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-POLICY_PATH = Path("/etc/windsurf/policy/policy.json")
+def resolve_policy_path() -> Path:
+    """Resolve policy path (deployed path first, repo-local fallback for testing)."""
+    system_path = Path("/etc/windsurf/policy/policy.json")
+    local_path = Path(__file__).resolve().parents[1] / "windsurf" / "policy" / "policy.json"
+    return system_path if system_path.exists() else local_path
 
-# ATLAS-GATE operations and required fields
-ATLAS_GATE_OPS = {
-    "atlas_gate.read": {
-        "required": ["path"],
-        "optional": ["encoding", "max_bytes"],
-    },
-    "atlas_gate.write": {
-        "required": ["path", "content"],
-        "optional": ["mode", "encoding"],
-    },
-    "atlas_gate.exec": {
-        "required": ["command"],
-        "optional": ["timeout", "env"],
-    },
-    "atlas_gate.stat": {
-        "required": ["path"],
-        "optional": [],
-    },
+
+POLICY_PATH = resolve_policy_path()
+
+ATLAS_GATE_PREFIX = "mcp_atlas-gate-mcp_"
+
+# ATLAS-GATE MCP bare tool names (from server.js)
+ATLAS_GATE_BARE_TOOLS = {
+    "begin_session",
+    "write_file",
+    "read_file",
+    "read_audit_log",
+    "read_prompt",
+    "list_plans",
+    "replay_execution",
+    "verify_workspace_integrity",
+    "generate_attestation_bundle",
+    "verify_attestation_bundle",
+    "export_attestation_bundle",
+    "bootstrap_create_foundation_plan",
+    "lint_plan",
 }
 
 
@@ -59,49 +61,12 @@ def block(msg: str, details: Optional[List[str]] = None):
     sys.exit(2)
 
 
-def validate_atlas_gate_payload(tool_name: str, tool: Dict) -> bool:
-    """
-    Validate that ATLAS-GATE payload is well-formed.
-
-    Returns True if valid, calls block() otherwise.
-    """
-    if tool_name not in ATLAS_GATE_OPS:
-        block(
-            f"Unknown ATLAS-GATE operation: {tool_name}",
-            [f"Allowed: {list(ATLAS_GATE_OPS.keys())}"],
-        )
-
-    spec = ATLAS_GATE_OPS[tool_name]
-
-    # Check required fields
-    missing = []
-    for field in spec["required"]:
-        if field not in tool:
-            missing.append(field)
-
-    if missing:
-        block(
-            f"Malformed ATLAS-GATE payload for {tool_name}",
-            [f"Missing required fields: {missing}", f"Required: {spec['required']}"],
-        )
-
-    # Validate field types (basic sanity)
-    for field in spec["required"]:
-        value = tool.get(field)
-        if value is None or (isinstance(value, str) and not value.strip()):
-            block(
-                f"ATLAS-GATE field '{field}' is empty or None",
-                [f"Operation: {tool_name}"],
-            )
-
-    return True
-
-
 def main():
     """
     Primary gate: Only ATLAS-GATE tools permitted.
 
     Hard enforcement: no exceptions, no warnings, no fallbacks.
+    Accepts both naming conventions: mcp_atlas-gate-mcp_* and bare ATLAS-GATE tool names.
     """
     try:
         payload = json.load(sys.stdin)
@@ -132,46 +97,31 @@ def main():
     if not tool_name:
         block("No tool specified in payload")
 
-    # Rule 2: Tool must be ATLAS-GATE
-    if not tool_name.startswith("atlas_gate."):
+    # Rule 2: Tool must be ATLAS-GATE (either prefixed or bare name)
+    is_prefixed = tool_name.startswith(ATLAS_GATE_PREFIX)
+    is_bare = tool_name in ATLAS_GATE_BARE_TOOLS
+    
+    if not (is_prefixed or is_bare):
         block(
             "Only ATLAS-GATE tools are permitted",
             [
                 f"Tool requested: {tool_name}",
-                "ATLAS-GATE tools: atlas_gate.read, atlas_gate.write, atlas_gate.exec, atlas_gate.stat",
+                f"Tool must be ATLAS-GATE MCP (prefixed with '{ATLAS_GATE_PREFIX}' or be a known ATLAS-GATE tool)",
                 "Direct filesystem, command execution, and native tools are disabled",
                 "Route all requests through ATLAS-GATE",
             ],
         )
 
-    # Rule 3: ATLAS-GATE payload must be well-formed
-    validate_atlas_gate_payload(tool_name, tool)
-
-    # Rule 4: Reject attempts to smuggle execution via arguments
-    # (Check for shell metacharacters in sensitive fields)
-    dangerous_chars = ["|", ";", "&", ">", "<", "$", "`", "\n", "\r"]
-
-    if tool_name == "atlas_gate.exec":
-        command = tool.get("command", "")
-        if not isinstance(command, str):
-            block("ATLAS-GATE exec: command must be string")
-        # Note: Don't block shell syntax here — ATLAS-GATE.exec handles validation
-        # Just ensure it's well-formed string
-        if not command.strip():
-            block("ATLAS-GATE exec: command cannot be empty")
-
-    elif tool_name in ["atlas_gate.read", "atlas_gate.write", "atlas_gate.stat"]:
-        path = tool.get("path", "")
-        if not isinstance(path, str):
-            block(f"ATLAS-GATE {tool_name}: path must be string")
-        if not path.strip():
-            block(f"ATLAS-GATE {tool_name}: path cannot be empty")
-        # Path validation is ATLAS-GATE's job, not ours
-        # But ensure no obvious escape attempts in the path itself
-        if ".." in path or path.startswith("~"):
-            # Note: These might be legitimate — ATLAS-GATE decides
-            # We just log the pattern
-            pass
+    # Rule 3: Tool should be in policy allowlist when configured
+    allowed_tools = set(policy.get("mcp_tool_allowlist", []))
+    if allowed_tools and tool_name not in allowed_tools:
+        block(
+            f"ATLAS-GATE tool not in allowlist: {tool_name}",
+            [
+                f"Allowed tools configured: {len(allowed_tools)}",
+                "Update policy.mcp_tool_allowlist if this is intentional",
+            ],
+        )
 
     # Success: This tool is authorized
     sys.exit(0)

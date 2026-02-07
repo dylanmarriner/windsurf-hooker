@@ -15,7 +15,14 @@ import sys
 from pathlib import Path
 from typing import Optional, List
 
-POLICY_PATH = Path("/etc/windsurf/policy/policy.json")
+def resolve_policy_path() -> Path:
+    """Resolve policy path (deployed path first, repo-local fallback for testing)."""
+    system_path = Path("/etc/windsurf/policy/policy.json")
+    local_path = Path(__file__).resolve().parents[1] / "windsurf" / "policy" / "policy.json"
+    return system_path if system_path.exists() else local_path
+
+
+POLICY_PATH = resolve_policy_path()
 
 
 def block(msg: str, details: Optional[List[str]] = None):

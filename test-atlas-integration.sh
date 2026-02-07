@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_DIR="/home/kubuntux/Documents/windsurf-hooker"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOKS_DIR="$REPO_DIR/windsurf-hooks"
 POLICY_FILE="$REPO_DIR/windsurf/policy/policy.json"
 
@@ -66,11 +66,14 @@ else
 fi
 
 # Verify policy has required fields
+export REPO_DIR
 python3 << 'EOF'
 import json
+import os
 from pathlib import Path
 
-policy = json.loads(Path("/home/kubuntux/Documents/windsurf-hooker/windsurf/policy/policy.json").read_text())
+policy_path = Path(os.environ["REPO_DIR"]) / "windsurf" / "policy" / "policy.json"
+policy = json.loads(policy_path.read_text())
 required = ["mcp_tool_allowlist", "block_commands_regex", "prohibited_patterns"]
 
 for field in required:
