@@ -1,0 +1,24 @@
+{
+  "_comment": "Plan registry: maps aliases to BLAKE3 hashes. Hashes are authoritative, names are convenience only.",
+  "plans": [
+    {
+      "name": "initial-setup",
+      "blake3_hash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "description": "Initial repository setup and configuration",
+      "created_at": "2024-01-01T00:00:00Z",
+      "path": "/docs/plans/initial-setup.md"
+    },
+    {
+      "name": "audit-enforcement",
+      "blake3_hash": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+      "description": "Audit and enforcement policy implementation",
+      "created_at": "2024-02-01T00:00:00Z",
+      "path": "/docs/plans/audit-enforcement.md"
+    }
+  ],
+  "resolver_notes": {
+    "blake3_mandatory": true,
+    "windsurf_role": "pass-through only",
+    "validation": "ATLAS-GATE enforces; hooks only ensure presence"
+  }
+}

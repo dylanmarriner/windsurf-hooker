@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-import json, sys, re
+"""
+pre_write_code_policy: Code policy enforcement (escape primitives, mocks, logic preservation)
+
+This hook checks:
+1. Prohibited patterns (placeholders, mocks, hacks, escape attempts)
+2. Logic preservation (don't remove executable code)
+3. REPAIR mode constraints (no mocks)
+
+Design: Defense-in-depth code quality checks.
+ATLAS-GATE is the authoritative source for plan/write validation.
+This hook does NOT check plan correctness (that's ATLAS-GATE's job).
+"""
+
+import json
+import sys
+import re
 from pathlib import Path
 
 POLICY_PATH = Path("/etc/windsurf/policy/policy.json")
@@ -48,34 +63,41 @@ def main():
     edits = (payload.get("tool_info", {}) or {}).get("edits", [])
     context = payload.get("conversation_context", "") or ""
 
-    in_repair_mode = "[MODE:AUDITOR_OK]" in context and "[MODE:REPAIR_OK]" not in context
+    # Detect operational modes from context
+    in_repair_mode = "[MODE:REPAIR]" in context
+    in_plan_mode = "[MODE:PLAN]" in context
+    plan_ok = "PLAN_OK=true" in context or "[PLAN_OK]" in context
 
     violations = []
 
     for e in edits:
         old = e.get("old_string", "") or ""
         new = e.get("new_string", "") or ""
+        path = e.get("path", "unknown")
 
         old_exec = count_exec(old)
         new_exec = count_exec(new)
 
+        # Check for prohibited patterns in new code
         for pat in patterns:
             if re.search(pat, new, re.IGNORECASE):
-                violations.append(f"Prohibited pattern: {pat}")
+                violations.append(f"Prohibited pattern in {path}: {pat}")
 
+        # In REPAIR mode, mock patterns are forbidden
         if in_repair_mode:
             for pat in MOCK_PATTERNS:
                 if re.search(pat, new):
-                    violations.append(f"Mock usage in REPAIR MODE: {pat}")
+                    violations.append(f"Mock usage forbidden in REPAIR mode: {pat}")
 
+        # Check executable logic preservation (strong rule)
         if old_exec > 0 and new_exec < old_exec and new.strip():
-            violations.append(f"Executable logic reduced ({old_exec} → {new_exec})")
+            violations.append(f"Logic reduction in {path}: {old_exec} → {new_exec} lines")
 
         if old_exec > 0 and new_exec == 0 and new.strip():
-            violations.append("Executable logic replaced by comments/text")
+            violations.append(f"Logic removed in {path} (replaced by text/comments)")
 
     if violations:
-        fail("Illegal REPAIR behavior detected.", violations)
+        fail("Code policy violation detected.", violations)
 
     sys.exit(0)
 

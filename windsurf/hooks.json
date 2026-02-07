@@ -1,32 +1,104 @@
 {
   "hooks": {
+    "pre_intent_classification": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_intent_classification.py",
+        "show_output": true
+      }
+    ],
+    "pre_plan_resolution": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_plan_resolution.py",
+        "show_output": true
+      }
+    ],
     "pre_user_prompt": [
       {
         "command": "python3 /usr/local/share/windsurf-hooks/pre_user_prompt_gate.py",
         "show_output": true
       }
     ],
+    "pre_write_diff_quality": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_write_diff_quality.py",
+        "show_output": true
+      }
+    ],
     "pre_write_code": [
       {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_write_code_escape_detection.py",
+        "show_output": true,
+        "phase": "atlas_gate_escape_detection"
+      },
+      {
         "command": "python3 /usr/local/share/windsurf-hooks/pre_write_code_policy.py",
-        "show_output": true
+        "show_output": true,
+        "phase": "general_policy"
+      }
+    ],
+    "pre_filesystem_write": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_filesystem_write_atlas_enforcement.py",
+        "show_output": true,
+        "phase": "atlas_gate_filesystem_boundary"
+      },
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_filesystem_write.py",
+        "show_output": true,
+        "phase": "general_filesystem_safety"
       }
     ],
     "pre_mcp_tool_use": [
       {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_mcp_tool_use_atlas_gate.py",
+        "show_output": true,
+        "phase": "atlas_gate_primary_gate"
+      },
+      {
         "command": "python3 /usr/local/share/windsurf-hooks/pre_mcp_tool_use_allowlist.py",
-        "show_output": true
+        "show_output": true,
+        "phase": "fallback_allowlist"
       }
     ],
     "pre_run_command": [
       {
+        "command": "python3 /usr/local/share/windsurf-hooks/pre_run_command_kill_switch.py",
+        "show_output": true,
+        "phase": "atlas_gate_kill_switch"
+      },
+      {
         "command": "python3 /usr/local/share/windsurf-hooks/pre_run_command_blocklist.py",
+        "show_output": true,
+        "phase": "pattern_blocklist"
+      }
+    ],
+    "post_write_semantic_diff": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/post_write_semantic_diff.py",
+        "show_output": true
+      }
+    ],
+    "post_write_observability": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/post_write_observability.py",
         "show_output": true
       }
     ],
     "post_write_code": [
       {
         "command": "python3 /usr/local/share/windsurf-hooks/post_write_verify.py",
+        "show_output": true
+      }
+    ],
+    "post_refusal_audit": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/post_refusal_audit.py",
+        "show_output": true
+      }
+    ],
+    "post_session_entropy_check": [
+      {
+        "command": "python3 /usr/local/share/windsurf-hooks/post_session_entropy_check.py",
         "show_output": true
       }
     ]

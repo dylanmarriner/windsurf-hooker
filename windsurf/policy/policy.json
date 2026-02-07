@@ -1,23 +1,168 @@
 {
-  "block_commands_regex": [],
+  "_comment": "ATLAS-GATE Windsurf Policy: MCP-only sandbox enforcement",
+  "profile": "atlas_windsurf_exec_mutation",
   "mcp_tool_allowlist": [
-    "search_code",
-    "list_files",
-    "read_file",
-    "get_definition",
-    "list_pull_requests",
-    "get_pull_request",
-    "list_issues",
-    "get_issue"
+    "mcp_atlas-gate-mcp_begin_session",
+    "mcp_atlas-gate-mcp_read_prompt",
+    "mcp_atlas-gate-mcp_list_plans",
+    "mcp_atlas-gate-mcp_read_file",
+    "mcp_atlas-gate-mcp_write_file",
+    "mcp_atlas-gate-mcp_read_audit_log",
+    "mcp_atlas-gate-mcp_verify_workspace_integrity",
+    "mcp_atlas-gate-mcp_replay_execution",
+    "mcp_atlas-gate-mcp_generate_attestation_bundle",
+    "mcp_atlas-gate-mcp_verify_attestation_bundle",
+    "mcp_atlas-gate-mcp_export_attestation_bundle"
   ],
+  "block_commands_regex": [".*"],
+  "filesystem": {
+    "direct_read": false,
+    "direct_write": false,
+    "direct_exec": false,
+    "comment": "All filesystem operations must route through ATLAS-GATE tools"
+  },
   "tokens": {
     "audit_ok": "[AUDIT_OK]",
-    "repair_ok": "[REPAIR_OK]",
-    "ship_ok": "[SHIP:GATES_OK]"
+    "ship_ok": "[SHIP:GATES_OK]",
+    "comment": "Legacy; plan hashes are now the authority"
   },
   "prohibited_patterns": {
-    "placeholders": ["TODO", "FIXME", "XXX", "pass", "...", "unimplemented", "stub"],
+    "placeholders": ["TODO", "FIXME", "XXX", "pass", "unimplemented", "stub"],
     "mock_artifacts": ["mock data", "fake data", "demo data", "hardcoded test"],
-    "assumptions_and_hacks": ["assume", "temporary", "for now", "hack", "workaround"]
+    "assumptions_and_hacks": ["assume", "temporary", "for now", "hack", "workaround"],
+    "escape_attempts": [
+      "os\\.system",
+      "subprocess",
+      "exec\\(",
+      "eval\\(",
+      "\\bopen\\("
+    ]
+  },
+  "intent_classification": {
+    "code_write_confidence_threshold": 0.80,
+    "high_confidence_gates": true
+  },
+  "plan_resolution": {
+    "search_paths": [
+      "PLAN.md",
+      ".plan/PLAN.md",
+      "docs/PLAN.md",
+      "docs/architecture/PLAN.md",
+      ".github/PLAN.md"
+    ],
+    "auto_enforce_scope": false,
+    "require_scope_declaration": false
+  },
+  "diff_quality": {
+    "max_lines_per_edit": 100,
+    "max_total_lines": 500,
+    "max_files_per_pass": 10,
+    "min_comment_ratio_for_generated": 0.1,
+    "ship_mode_enforces_quality": true
+  },
+  "filesystem_write": {
+    "max_new_files": 50,
+    "suspicious_patterns": [
+      "node_modules",
+      "\\.git",
+      "\\.env",
+      "__pycache__",
+      "dist",
+      "build",
+      "\\.cache",
+      "\\.tmp",
+      "venv"
+    ],
+    "suspicious_extensions": [
+      ".exe",
+      ".dll",
+      ".so",
+      ".bin",
+      ".pyc",
+      ".o",
+      ".a",
+      ".iso",
+      ".dmg"
+    ]
+  },
+  "observability": {
+    "min_lines_for_logging": 10,
+    "min_lines_for_metrics": 20,
+    "enforce_in_ship_mode": true,
+    "require_tracing": false
+  },
+  "session_entropy": {
+    "circular_retry_threshold": 3,
+    "entropy_alert_threshold": 0.7,
+    "escalation_mode": "plan"
+  },
+  "atlas_gate": {
+    "enabled": true,
+    "enforce_mode": "strict",
+    "operations": {
+      "atlas_gate.read": {
+        "required_fields": ["path"],
+        "optional_fields": ["encoding", "max_bytes"],
+        "description": "Read file via ATLAS-GATE"
+      },
+      "atlas_gate.write": {
+        "required_fields": ["path", "content"],
+        "optional_fields": ["mode", "encoding"],
+        "description": "Write file via ATLAS-GATE"
+      },
+      "atlas_gate.exec": {
+        "required_fields": ["command"],
+        "optional_fields": ["timeout", "env"],
+        "description": "Execute command via ATLAS-GATE"
+      },
+      "atlas_gate.stat": {
+        "required_fields": ["path"],
+        "optional_fields": [],
+        "description": "Stat file via ATLAS-GATE"
+      }
+    },
+    "filesystem": {
+      "direct_read": false,
+      "direct_write": false,
+      "direct_exec": false,
+      "comment": "All operations must go through ATLAS-GATE tools"
+    },
+    "forbidden_paths": {
+      ".ssh": "SSH keys and config",
+      ".aws": "AWS credentials",
+      ".env": "Environment files",
+      ".git/config": "Git configuration",
+      "/etc": "System configuration",
+      "/proc": "Process files",
+      "/sys": "System kernel",
+      "/root": "Root home directory",
+      "/var/log": "System logs"
+    },
+    "forbidden_extensions": {
+      ".exe": "Windows executable",
+      ".dll": "Windows DLL",
+      ".so": "Unix shared object",
+      ".bin": "Binary blob",
+      ".pyc": "Python compiled",
+      ".jar": "Java archive",
+      ".iso": "Disk image",
+      ".dmg": "macOS image"
+    },
+    "escape_patterns": [
+      "subprocess\\.",
+      "os\\.system",
+      "os\\.popen",
+      "exec\\(",
+      "eval\\(",
+      "compile\\(",
+      "__import__\\(",
+      "socket\\.",
+      "urllib\\.",
+      "ctypes\\.",
+      "cffi\\.",
+      "bash -c",
+      "sh -c",
+      "cmd /c"
+    ]
   }
 }
