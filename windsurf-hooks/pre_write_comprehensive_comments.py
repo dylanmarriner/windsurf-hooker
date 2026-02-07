@@ -2,12 +2,16 @@
 """
 pre_write_comprehensive_comments: Enforce Comprehensive, Meaningful Commentary
 
-Core Invariant:
+Enforced uniformly across 15 languages: Python, JavaScript, TypeScript, Java, C, C++, C#,
+Go, Rust, PHP, Ruby, Swift, Kotlin, R, MATLAB.
+
+Core Requirements:
 - Every function/class must have a docstring explaining purpose, parameters, return value
 - Complex logic must have inline comments explaining WHY (not WHAT)
 - Comments must be accurate and non-trivial
 - No empty or one-liner docstrings for functions > 5 lines
 - Code must be inherently debuggable through clear naming and documentation
+- All 15 languages required to meet same documentation standard
 
 This enforces that code is not just working, but DOCUMENTED and MAINTAINABLE.
 """
@@ -449,7 +453,9 @@ def main():
         path = edit.get("path", "unknown")
         
         # Skip test files, config files, and markdown
-        if any(x in path.lower() for x in ["test", "spec", "mock", ".json", ".md", ".yaml"]):
+        if any(x in path.lower() for x in ["test", "spec", "mock"]):
+            continue
+        if path.endswith((".json", ".md", ".yaml", ".yml", ".toml", ".config")):
             continue
         
         language = detect_language(path)
@@ -460,10 +466,22 @@ def main():
         
         # Check function documentation (Phase 2+: all C-family, Go, Rust, Ruby, PHP)
         supported_doc_check = {
-            "python", "javascript", "java", "cpp", "c", "go", "rust", "csharp", "php", "ruby"
+            "python", "javascript", "java", "cpp", "c", "go", "rust", "csharp", "php", "ruby",
+            "swift", "kotlin", "typescript"
         }
         if language in supported_doc_check:
             functions = extract_functions(new_code, language)
+            # All functions must have docstrings
+            if functions and not all(f.get("docstring") for f in functions):
+                missing = [f for f in functions if not f.get("docstring")]
+                for f in missing:
+                    all_violations.append({
+                        "type": "missing_docstring",
+                        "line": f["line"],
+                        "file": path,
+                        "function": f["name"],
+                        "reason": f"HARD FAIL: Function '{f['name']}' must have complete docstring",
+                    })
             all_violations.extend(check_function_documentation(functions, new_code, path))
         
         # Check inline comment density (all supported languages)
@@ -471,6 +489,15 @@ def main():
         
         # Check meaningful names (all supported languages)
         all_violations.extend(check_meaningful_names(new_code, path))
+        
+        # Check for incomplete implementations
+        if re.search(r"(TODO|FIXME|XXX|HACK|TEMP|pass\s*$|return\s*$|raise NotImplementedError)", new_code):
+            all_violations.append({
+                "type": "incomplete_implementation",
+                "line": 1,
+                "file": path,
+                "reason": "HARD FAIL: Code contains incomplete implementation markers",
+            })
     
     if all_violations:
         details = []
@@ -483,9 +510,10 @@ def main():
                 seen.add(line_info)
         
         block(
-            "Code lacks comprehensive documentation. Every function must have a docstring, "
-            "and complex logic must have comments explaining WHY. Names must be meaningful.",
-            details[:10],  # Limit to first 10 violations
+            "HARD FAIL: Code must be production-ready with complete documentation.\n"
+            "Every function must have docstring. Complex logic must have WHY comments. "
+            "All names must be meaningful. No incomplete code.",
+            details[:20],  # Show more violations
         )
     
     sys.exit(0)

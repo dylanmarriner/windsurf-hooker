@@ -29,15 +29,226 @@
     "comment": "Legacy; plan hashes are now the authority"
   },
   "prohibited_patterns": {
-    "placeholders": ["TODO", "FIXME", "XXX", "pass", "unimplemented", "stub"],
-    "mock_artifacts": ["mock data", "fake data", "demo data", "hardcoded test"],
-    "assumptions_and_hacks": ["assume", "temporary", "for now", "hack", "workaround"],
+    "placeholders": [
+      "TODO", "TO-DO", "TBD", "FIXME", "XXX", "pass", "unimplemented", "stub", "dummy", "null",
+      "placeholder", "sample", "example-only", "fake", "scaffold", "skeleton", "partial"
+    ],
+    "comments_and_notes": [
+      "HACK", "TEMP", "future-work", "left as an exercise", "explanatory prose"
+    ],
+    "incomplete_code": [
+      "\\.\\.\\.", "omitted section", "commented.?out", "pseudocode", "ellipsis"
+    ],
+    "mock_artifacts": [
+      "mock data", "fake data", "demo data", "hardcoded test", "mock\\(", "Mock\\b",
+      "stub\\(", "spy\\(", "synthetic fixture", "fake value"
+    ],
+    "assumptions_and_deferred": [
+      "assume", "temporary", "for now", "workaround", "deferred", "user-dependent"
+    ],
     "escape_attempts": [
-      "os\\.system",
-      "subprocess",
-      "exec\\(",
-      "eval\\(",
-      "\\bopen\\("
+      "os\\.system", "subprocess", "exec\\(", "eval\\(", "\\bopen\\(",
+      "Runtime\\.getRuntime\\(\\)\\.exec", "ProcessBuilder", "java\\.lang\\.Runtime"
+    ]
+  },
+  "language_support": {
+    "supported_languages": [
+      "python", "javascript", "typescript", "java", "c", "cpp", "csharp",
+      "go", "rust", "php", "ruby", "swift", "kotlin", "r", "matlab"
+    ],
+    "comment": "All rules apply uniformly across these 15 languages"
+  },
+  "testing_requirements": {
+    "coverage_minimum": 100,
+    "coverage_type": "line and branch",
+    "mock_usage": "forbidden",
+    "comment": "Real implementations and real data paths only",
+    "language_standards": {
+      "python": {
+        "framework": "pytest",
+        "coverage_tool": "coverage.py with branch enabled",
+        "command": "pytest --cov=src --cov-branch --cov-report=term-missing"
+      },
+      "javascript": {
+        "framework": "Jest or Vitest",
+        "coverage_tool": "built-in coverage",
+        "command": "jest --coverage --collectCoverageFrom='src/**/*.js'"
+      },
+      "typescript": {
+        "framework": "Jest or Vitest",
+        "coverage_tool": "built-in coverage",
+        "command": "jest --coverage --collectCoverageFrom='src/**/*.ts'"
+      },
+      "java": {
+        "framework": "JUnit 5",
+        "coverage_tool": "JaCoCo with branch coverage",
+        "command": "mvn clean test jacoco:report"
+      },
+      "c": {
+        "framework": "Catch2 or GoogleTest",
+        "coverage_tool": "gcov or llvm-cov",
+        "command": "cmake --build . && ctest && gcov ."
+      },
+      "cpp": {
+        "framework": "Catch2 or GoogleTest",
+        "coverage_tool": "gcov or llvm-cov",
+        "command": "cmake --build . && ctest && gcov ."
+      },
+      "csharp": {
+        "framework": "xUnit or NUnit",
+        "coverage_tool": "coverlet",
+        "command": "dotnet test /p:CollectCoverage=true"
+      },
+      "go": {
+        "framework": "go test",
+        "coverage_tool": "go coverage",
+        "command": "go test -covermode=atomic -coverprofile=coverage.out ./..."
+      },
+      "rust": {
+        "framework": "cargo test",
+        "coverage_tool": "tarpaulin or llvm-cov",
+        "command": "cargo tarpaulin --out Stdout --timeout 120"
+      },
+      "php": {
+        "framework": "PHPUnit",
+        "coverage_tool": "PHPUnit coverage",
+        "command": "phpunit --coverage-html=coverage"
+      },
+      "ruby": {
+        "framework": "RSpec or Minitest",
+        "coverage_tool": "simplecov",
+        "command": "bundle exec rspec --coverage"
+      },
+      "swift": {
+        "framework": "XCTest",
+        "coverage_tool": "Xcode code coverage",
+        "command": "swift test --coverage"
+      },
+      "kotlin": {
+        "framework": "JUnit",
+        "coverage_tool": "JaCoCo",
+        "command": "gradle test jacocoTestReport"
+      },
+      "r": {
+        "framework": "testthat",
+        "coverage_tool": "covr",
+        "command": "covr::package_coverage()"
+      },
+      "matlab": {
+        "framework": "matlab.unittest",
+        "coverage_tool": "matlab.codetools.coverage",
+        "command": "runtests('Tests')"
+      }
+    }
+  },
+  "linting_requirements": {
+    "enforcement": "strict with zero warnings or errors",
+    "suppressions": "not allowed",
+    "language_standards": {
+      "python": {
+        "tools": ["mypy (strict mode)", "ruff", "flake8"],
+        "config_files": [".flake8", "pyproject.toml", "ruff.toml"],
+        "strict_modes": ["--strict (mypy)", "extend-select=E,W,F (ruff)"]
+      },
+      "javascript": {
+        "tools": ["ESLint (strict)", "Prettier"],
+        "config_files": [".eslintrc.js", "eslint.config.mjs"],
+        "strict_modes": ["extends: 'eslint:recommended'"]
+      },
+      "typescript": {
+        "tools": ["ESLint (strict)", "TypeScript strict mode", "Prettier"],
+        "config_files": ["tsconfig.json", ".eslintrc.js"],
+        "strict_modes": ["strict: true (tsconfig.json)"]
+      },
+      "java": {
+        "tools": ["SpotBugs", "Checkstyle"],
+        "config_files": ["checkstyle.xml", "spotbugs.xml"],
+        "strict_modes": ["all rules enabled"]
+      },
+      "c": {
+        "tools": ["clang-tidy", "compiler warnings as errors"],
+        "config_files": [".clang-tidy"],
+        "strict_modes": ["-Wall -Werror -Wextra -pedantic"]
+      },
+      "cpp": {
+        "tools": ["clang-tidy", "compiler warnings as errors"],
+        "config_files": [".clang-tidy"],
+        "strict_modes": ["-Wall -Werror -Wextra -pedantic -std=c++17"]
+      },
+      "csharp": {
+        "tools": ["Roslyn analyzers", "nullable reference types"],
+        "config_files": [".editorconfig"],
+        "strict_modes": ["<Nullable>enable</Nullable>"]
+      },
+      "go": {
+        "tools": ["go vet", "staticcheck"],
+        "config_files": ["golangci.yml"],
+        "strict_modes": ["all linters enabled"]
+      },
+      "rust": {
+        "tools": ["clippy (deny warnings)"],
+        "config_files": ["clippy.toml"],
+        "strict_modes": ["#![deny(warnings)]"]
+      },
+      "php": {
+        "tools": ["PHPStan (max level)", "PHP_CodeSniffer"],
+        "config_files": ["phpstan.neon"],
+        "strict_modes": ["level: 9"]
+      },
+      "ruby": {
+        "tools": ["RuboCop"],
+        "config_files": [".rubocop.yml"],
+        "strict_modes": ["all cops enabled"]
+      },
+      "swift": {
+        "tools": ["SwiftLint"],
+        "config_files": [".swiftlint.yml"],
+        "strict_modes": ["all rules enabled"]
+      },
+      "kotlin": {
+        "tools": ["Detekt"],
+        "config_files": ["detekt.yml"],
+        "strict_modes": ["all rules enabled"]
+      },
+      "r": {
+        "tools": ["lintr"],
+        "config_files": [".lintr"],
+        "strict_modes": ["all linters enabled"]
+      },
+      "matlab": {
+        "tools": ["code analyzer with all warnings enabled"],
+        "config_files": [],
+        "strict_modes": ["all warnings enabled in checkcode()"]
+      }
+    }
+  },
+  "implementation_requirements": {
+    "mandatory": [
+      "Every function, class, method, and module must be fully implemented",
+      "All logic paths handled; no unhandled branches or undefined behavior",
+      "All dependencies must be real, explicit, pinned, and installable",
+      "Configuration must be concrete, production-ready, and validated",
+      "Inputs/outputs fully specified with strict validation",
+      "Comprehensive, explicit error handling",
+      "Deterministic behavior",
+      "The code must run as-is without modification"
+    ]
+  },
+  "performance_constraints": {
+    "mandatory": [
+      "Define explicit time and memory limits appropriate to the problem domain",
+      "Enforce performance with measurable benchmarks or assertions",
+      "Avoid unnecessary allocations and superlinear algorithms",
+      "Ensure worst-case behavior respects the stated limits"
+    ]
+  },
+  "quality_bar": {
+    "standards": [
+      "Production-ready, idiomatic, robust",
+      "Correctness over brevity",
+      "Clean architecture, no dead code",
+      "Clear, precise naming",
+      "Security-conscious defaults"
     ]
   },
   "intent_classification": {
