@@ -491,7 +491,7 @@ def main():
         all_violations.extend(check_meaningful_names(new_code, path))
         
         # Check for incomplete implementations
-        if re.search(r"(TODO|FIXME|XXX|HACK|TEMP|pass\s*$|return\s*$|raise NotImplementedError)", new_code):
+        if re.search(r"(TODO|FIXME|XXX|HACK|\bTEMP\b|pass\s*$|return\s*$|raise NotImplementedError)", new_code):
             all_violations.append({
                 "type": "incomplete_implementation",
                 "line": 1,

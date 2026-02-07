@@ -14,9 +14,24 @@
     "verify_attestation_bundle",
     "export_attestation_bundle",
     "bootstrap_create_foundation_plan",
-    "lint_plan"
+    "lint_plan",
+    "mcp_atlas-gate-mcp_begin_session",
+    "mcp_atlas-gate-mcp_read_prompt",
+    "mcp_atlas-gate-mcp_list_plans",
+    "mcp_atlas-gate-mcp_read_file",
+    "mcp_atlas-gate-mcp_write_file",
+    "mcp_atlas-gate-mcp_read_audit_log",
+    "mcp_atlas-gate-mcp_verify_workspace_integrity",
+    "mcp_atlas-gate-mcp_replay_execution",
+    "mcp_atlas-gate-mcp_generate_attestation_bundle",
+    "mcp_atlas-gate-mcp_verify_attestation_bundle",
+    "mcp_atlas-gate-mcp_export_attestation_bundle",
+    "mcp_atlas-gate-mcp_bootstrap_create_foundation_plan",
+    "mcp_atlas-gate-mcp_lint_plan"
   ],
-  "block_commands_regex": [".*"],
+  "block_commands_regex": [
+    ".*"
+  ],
   "filesystem": {
     "direct_read": false,
     "direct_write": false,
@@ -30,31 +45,162 @@
   },
   "prohibited_patterns": {
     "placeholders": [
-      "TODO", "TO-DO", "TBD", "FIXME", "XXX", "pass", "unimplemented", "stub", "dummy", "null",
-      "placeholder", "sample", "example-only", "fake", "scaffold", "skeleton", "partial"
+      "TODO",
+      "TO-DO",
+      "TBD",
+      "FIXME",
+      "XXX",
+      "pass",
+      "unimplemented",
+      "stub",
+      "dummy",
+      "null",
+      "placeholder",
+      "sample",
+      "example-only",
+      "fake",
+      "scaffold",
+      "skeleton",
+      "partial"
     ],
     "comments_and_notes": [
-      "HACK", "TEMP", "future-work", "left as an exercise", "explanatory prose"
+      "HACK",
+      "\\bTEMP\\b",
+      "future-work",
+      "left as an exercise",
+      "explanatory prose"
     ],
     "incomplete_code": [
-      "\\.\\.\\.", "omitted section", "commented.?out", "pseudocode", "ellipsis"
+      "\\.\\.\\.",
+      "omitted section",
+      "commented.?out",
+      "pseudocode",
+      "ellipsis"
     ],
     "mock_artifacts": [
-      "mock data", "fake data", "demo data", "hardcoded test", "mock\\(", "Mock\\b",
-      "stub\\(", "spy\\(", "synthetic fixture", "fake value"
+      "mock data",
+      "fake data",
+      "demo data",
+      "hardcoded test",
+      "mock\\(",
+      "Mock\\b",
+      "stub\\(",
+      "spy\\(",
+      "synthetic fixture",
+      "fake value"
     ],
     "assumptions_and_deferred": [
-      "assume", "temporary", "for now", "workaround", "deferred", "user-dependent"
+      "assume",
+      "\\btemporary\\b",
+      "for now",
+      "workaround",
+      "deferred",
+      "user-dependent"
     ],
     "escape_attempts": [
-      "os\\.system", "subprocess", "exec\\(", "eval\\(", "\\bopen\\(",
-      "Runtime\\.getRuntime\\(\\)\\.exec", "ProcessBuilder", "java\\.lang\\.Runtime"
+      "os\\.system",
+      "subprocess",
+      "exec\\(",
+      "eval\\(",
+      "\\bopen\\(",
+      "Runtime\\.getRuntime\\(\\)\\.exec",
+      "ProcessBuilder",
+      "java\\.lang\\.Runtime"
+    ],
+    "command_execution_patterns": [
+      "\\bpopen\\b",
+      "\\bsystem\\b",
+      "\\bshell\\s*=",
+      "\\bshell\\s*:",
+      "Popen",
+      "ShellExecute",
+      "WinExec",
+      "CreateProcess",
+      "execve",
+      "fork\\s*\\(",
+      "spawn",
+      "\\bsh\\b",
+      "\\bbash\\b",
+      "\\bcmd\\b",
+      "powershell",
+      "\\brm\\b",
+      "\\bcp\\b",
+      "\\bmv\\b",
+      "\\brm\\s*-rf",
+      "\\bsudo\\b",
+      "\\bsu\\b",
+      "#!/bin/",
+      "#!/usr/bin/"
+    ],
+    "code_execution_bypass": [
+      "__import__\\(",
+      "compile\\(",
+      "load_source",
+      "\\bexec\\b",
+      "\\beval\\b",
+      "getattr\\(",
+      "setattr\\(",
+      "globals\\(",
+      "locals\\(",
+      "vars\\(",
+      "\\breflect\\.",
+      "\\bimportlib\\.",
+      "require\\(.*require",
+      "dynamic.*require",
+      "__code__",
+      "__func__",
+      "MethodHandle",
+      "reflection",
+      "ClassLoader"
+    ],
+    "tool_bypass_patterns": [
+      "direct.*file",
+      "bypass.*atlas",
+      "skip.*validation",
+      "disable.*enforcement",
+      "override.*policy",
+      "ignore.*hook",
+      "force.*write",
+      "raw.*command",
+      "native.*code",
+      "\\bunsafe\\b",
+      "FFI",
+      "ctypes\\.",
+      "cffi\\.",
+      "jni\\."
+    ],
+    "network_command_execution": [
+      "curl\\s",
+      "wget\\s",
+      "nc\\s",
+      "telnet\\s",
+      "ssh\\s",
+      "rsh\\s",
+      "socat\\s",
+      "netcat",
+      "\\|\\s*sh",
+      "\\|\\s*bash",
+      "&&\\s*bash",
+      ";\\s*bash"
     ]
   },
   "language_support": {
     "supported_languages": [
-      "python", "javascript", "typescript", "java", "c", "cpp", "csharp",
-      "go", "rust", "php", "ruby", "swift", "kotlin", "r", "matlab"
+      "python",
+      "javascript",
+      "typescript",
+      "java",
+      "c",
+      "cpp",
+      "csharp",
+      "go",
+      "rust",
+      "php",
+      "ruby",
+      "swift",
+      "kotlin",
+      "r",
+      "matlab"
     ],
     "comment": "All rules apply uniformly across these 15 languages"
   },
@@ -146,79 +292,184 @@
     "suppressions": "not allowed",
     "language_standards": {
       "python": {
-        "tools": ["mypy (strict mode)", "ruff", "flake8"],
-        "config_files": [".flake8", "pyproject.toml", "ruff.toml"],
-        "strict_modes": ["--strict (mypy)", "extend-select=E,W,F (ruff)"]
+        "tools": [
+          "mypy (strict mode)",
+          "ruff",
+          "flake8"
+        ],
+        "config_files": [
+          ".flake8",
+          "pyproject.toml",
+          "ruff.toml"
+        ],
+        "strict_modes": [
+          "--strict (mypy)",
+          "extend-select=E,W,F (ruff)"
+        ]
       },
       "javascript": {
-        "tools": ["ESLint (strict)", "Prettier"],
-        "config_files": [".eslintrc.js", "eslint.config.mjs"],
-        "strict_modes": ["extends: 'eslint:recommended'"]
+        "tools": [
+          "ESLint (strict)",
+          "Prettier"
+        ],
+        "config_files": [
+          ".eslintrc.js",
+          "eslint.config.mjs"
+        ],
+        "strict_modes": [
+          "extends: 'eslint:recommended'"
+        ]
       },
       "typescript": {
-        "tools": ["ESLint (strict)", "TypeScript strict mode", "Prettier"],
-        "config_files": ["tsconfig.json", ".eslintrc.js"],
-        "strict_modes": ["strict: true (tsconfig.json)"]
+        "tools": [
+          "ESLint (strict)",
+          "TypeScript strict mode",
+          "Prettier"
+        ],
+        "config_files": [
+          "tsconfig.json",
+          ".eslintrc.js"
+        ],
+        "strict_modes": [
+          "strict: true (tsconfig.json)"
+        ]
       },
       "java": {
-        "tools": ["SpotBugs", "Checkstyle"],
-        "config_files": ["checkstyle.xml", "spotbugs.xml"],
-        "strict_modes": ["all rules enabled"]
+        "tools": [
+          "SpotBugs",
+          "Checkstyle"
+        ],
+        "config_files": [
+          "checkstyle.xml",
+          "spotbugs.xml"
+        ],
+        "strict_modes": [
+          "all rules enabled"
+        ]
       },
       "c": {
-        "tools": ["clang-tidy", "compiler warnings as errors"],
-        "config_files": [".clang-tidy"],
-        "strict_modes": ["-Wall -Werror -Wextra -pedantic"]
+        "tools": [
+          "clang-tidy",
+          "compiler warnings as errors"
+        ],
+        "config_files": [
+          ".clang-tidy"
+        ],
+        "strict_modes": [
+          "-Wall -Werror -Wextra -pedantic"
+        ]
       },
       "cpp": {
-        "tools": ["clang-tidy", "compiler warnings as errors"],
-        "config_files": [".clang-tidy"],
-        "strict_modes": ["-Wall -Werror -Wextra -pedantic -std=c++17"]
+        "tools": [
+          "clang-tidy",
+          "compiler warnings as errors"
+        ],
+        "config_files": [
+          ".clang-tidy"
+        ],
+        "strict_modes": [
+          "-Wall -Werror -Wextra -pedantic -std=c++17"
+        ]
       },
       "csharp": {
-        "tools": ["Roslyn analyzers", "nullable reference types"],
-        "config_files": [".editorconfig"],
-        "strict_modes": ["<Nullable>enable</Nullable>"]
+        "tools": [
+          "Roslyn analyzers",
+          "nullable reference types"
+        ],
+        "config_files": [
+          ".editorconfig"
+        ],
+        "strict_modes": [
+          "<Nullable>enable</Nullable>"
+        ]
       },
       "go": {
-        "tools": ["go vet", "staticcheck"],
-        "config_files": ["golangci.yml"],
-        "strict_modes": ["all linters enabled"]
+        "tools": [
+          "go vet",
+          "staticcheck"
+        ],
+        "config_files": [
+          "golangci.yml"
+        ],
+        "strict_modes": [
+          "all linters enabled"
+        ]
       },
       "rust": {
-        "tools": ["clippy (deny warnings)"],
-        "config_files": ["clippy.toml"],
-        "strict_modes": ["#![deny(warnings)]"]
+        "tools": [
+          "clippy (deny warnings)"
+        ],
+        "config_files": [
+          "clippy.toml"
+        ],
+        "strict_modes": [
+          "#![deny(warnings)]"
+        ]
       },
       "php": {
-        "tools": ["PHPStan (max level)", "PHP_CodeSniffer"],
-        "config_files": ["phpstan.neon"],
-        "strict_modes": ["level: 9"]
+        "tools": [
+          "PHPStan (max level)",
+          "PHP_CodeSniffer"
+        ],
+        "config_files": [
+          "phpstan.neon"
+        ],
+        "strict_modes": [
+          "level: 9"
+        ]
       },
       "ruby": {
-        "tools": ["RuboCop"],
-        "config_files": [".rubocop.yml"],
-        "strict_modes": ["all cops enabled"]
+        "tools": [
+          "RuboCop"
+        ],
+        "config_files": [
+          ".rubocop.yml"
+        ],
+        "strict_modes": [
+          "all cops enabled"
+        ]
       },
       "swift": {
-        "tools": ["SwiftLint"],
-        "config_files": [".swiftlint.yml"],
-        "strict_modes": ["all rules enabled"]
+        "tools": [
+          "SwiftLint"
+        ],
+        "config_files": [
+          ".swiftlint.yml"
+        ],
+        "strict_modes": [
+          "all rules enabled"
+        ]
       },
       "kotlin": {
-        "tools": ["Detekt"],
-        "config_files": ["detekt.yml"],
-        "strict_modes": ["all rules enabled"]
+        "tools": [
+          "Detekt"
+        ],
+        "config_files": [
+          "detekt.yml"
+        ],
+        "strict_modes": [
+          "all rules enabled"
+        ]
       },
       "r": {
-        "tools": ["lintr"],
-        "config_files": [".lintr"],
-        "strict_modes": ["all linters enabled"]
+        "tools": [
+          "lintr"
+        ],
+        "config_files": [
+          ".lintr"
+        ],
+        "strict_modes": [
+          "all linters enabled"
+        ]
       },
       "matlab": {
-        "tools": ["code analyzer with all warnings enabled"],
+        "tools": [
+          "code analyzer with all warnings enabled"
+        ],
         "config_files": [],
-        "strict_modes": ["all warnings enabled in checkcode()"]
+        "strict_modes": [
+          "all warnings enabled in checkcode()"
+        ]
       }
     }
   },
@@ -252,7 +503,7 @@
     ]
   },
   "intent_classification": {
-    "code_write_confidence_threshold": 0.80,
+    "code_write_confidence_threshold": 0.8,
     "high_confidence_gates": true
   },
   "plan_resolution": {
@@ -275,6 +526,13 @@
   },
   "filesystem_write": {
     "max_new_files": 50,
+    "protected_paths": [
+      "/usr/local/share/windsurf-hooks/",
+      "/etc/windsurf/policy/",
+      "/.local/share/windsurf-hooks/",
+      "/etc/windsurf/"
+    ],
+    "protected_paths_comment": "These paths are READ-ONLY. All modifications must use atlas_gate.write tool.",
     "suspicious_patterns": [
       "node_modules",
       "\\.git",
@@ -314,22 +572,40 @@
     "enforce_mode": "strict",
     "operations": {
       "atlas_gate.read": {
-        "required_fields": ["path"],
-        "optional_fields": ["encoding", "max_bytes"],
+        "required_fields": [
+          "path"
+        ],
+        "optional_fields": [
+          "encoding",
+          "max_bytes"
+        ],
         "description": "Read file via ATLAS-GATE"
       },
       "atlas_gate.write": {
-        "required_fields": ["path", "content"],
-        "optional_fields": ["mode", "encoding"],
+        "required_fields": [
+          "path",
+          "content"
+        ],
+        "optional_fields": [
+          "mode",
+          "encoding"
+        ],
         "description": "Write file via ATLAS-GATE"
       },
       "atlas_gate.exec": {
-        "required_fields": ["command"],
-        "optional_fields": ["timeout", "env"],
+        "required_fields": [
+          "command"
+        ],
+        "optional_fields": [
+          "timeout",
+          "env"
+        ],
         "description": "Execute command via ATLAS-GATE"
       },
       "atlas_gate.stat": {
-        "required_fields": ["path"],
+        "required_fields": [
+          "path"
+        ],
         "optional_fields": [],
         "description": "Stat file via ATLAS-GATE"
       }

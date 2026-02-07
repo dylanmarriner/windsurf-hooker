@@ -32,14 +32,26 @@ def block(msg: str):
 
 
 def main():
-    """Kill switch for shell execution - allows all terminal commands."""
+    """Kill switch for shell execution - blocks ALL terminal commands."""
     try:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError:
-        block("Invalid JSON input")
-
-    # Allow all terminal commands
-    return
+        block("BLOCKED: Invalid JSON input")
+    
+    # Get policy
+    text = POLICY_PATH.read_text().strip() if POLICY_PATH.exists() else ""
+    policy = json.loads(text) if text else {}
+    
+    # Check if any command is being executed
+    command = payload.get("command", "")
+    
+    if command:
+        block(
+            f"BLOCKED: Shell command execution disabled\n"
+            f"         Command: {command}\n"
+            f"         All operations must use atlas-gate tools only\n"
+            f"         Authorized tools: atlas_gate.write, atlas_gate.read, atlas_gate.exec"
+        )
 
 
 if __name__ == "__main__":

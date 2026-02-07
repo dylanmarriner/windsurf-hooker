@@ -154,7 +154,7 @@ def main():
         # Check for incomplete/placeholder code
         # ============================================================
         if re.search(
-            r"\b(TODO|FIXME|XXX|HACK|TEMP|pass\s*$|NotImplementedError|unimplemented|todo!)",
+            r"(TODO|FIXME|XXX|HACK|pass\s*$|NotImplementedError|unimplemented|todo!)|\bTEMP\b",
             new,
             re.MULTILINE | re.IGNORECASE
         ):
