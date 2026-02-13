@@ -1,0 +1,234 @@
+{
+  "name": "executor_control",
+  "description": "Hard execution invariants for Windsurf EXECUTOR role. Non-optional runtime guards.",
+  "version": "1.0",
+  "enforcement": "mandatory",
+  
+  "session_state_machine": {
+    "description": "Windsurf lifecycle state control. Enforces begin_session before any tool use.",
+    "states": {
+      "INIT": {
+        "allowed_tools": ["begin_session"],
+        "description": "Initial state. Only begin_session permitted."
+      },
+      "ACTIVE": {
+        "allowed_tools": [
+          "list_plans", "read_plan", "read_prompt", "read_file",
+          "write_file", "read_audit_log", "replay_execution",
+          "verify_workspace_integrity", "generate_attestation_bundle",
+          "verify_attestation_bundle", "export_attestation_bundle",
+          "lint_plan", "bootstrap_create_foundation_plan", "end_session"
+        ],
+        "description": "Session active. Execution tools available."
+      },
+      "CLOSED": {
+        "allowed_tools": [],
+        "description": "Session ended. No tools allowed. Reject all."
+      }
+    },
+    "transitions": {
+      "INIT->ACTIVE": "begin_session",
+      "ACTIVE->CLOSED": "end_session",
+      "default": "REJECT"
+    }
+  },
+
+  "plan_immutability": {
+    "enabled": true,
+    "enforcement": "strict",
+    "rules": [
+      {
+        "rule": "Hash entire plan before execution",
+        "action": "COMPUTE_SHA256(plan)"
+      },
+      {
+        "rule": "Store hash in session context",
+        "action": "PERSIST_HASH"
+      },
+      {
+        "rule": "Verify hash unchanged before each step",
+        "action": "VERIFY_HASH_MATCH"
+      },
+      {
+        "rule": "Reject if plan modified between steps",
+        "action": "HALT_AND_AUDIT"
+      }
+    ]
+  },
+
+  "strict_step_execution": {
+    "enabled": true,
+    "enforcement": "strict",
+    "rules": {
+      "execute_exactly": [
+        "tool",
+        "arguments",
+        "order"
+      ],
+      "forbidden_behaviors": [
+        "auto-retry",
+        "auto-repair",
+        "tool substitution",
+        "parameter mutation",
+        "step skipping",
+        "step reordering",
+        "step merging"
+      ],
+      "failure_strategy": {
+        "on_step_failure": "HALT",
+        "audit_trail": "PRESERVE_FULL_CONTEXT",
+        "return_to_caller": true,
+        "allow_continuation": false
+      }
+    }
+  },
+
+  "write_file_guardrails": {
+    "enabled": true,
+    "enforcement": "strict",
+    "description": "write_file is the only mutation surface. Strictly enforced.",
+    "required_fields": [
+      "path",
+      "content",
+      "plan_hash",
+      "intent"
+    ],
+    "validation_rules": [
+      {
+        "rule": "path must match plan scope",
+        "action": "VERIFY_PATH_WITHIN_SCOPE"
+      },
+      {
+        "rule": "path must not traverse boundaries",
+        "action": "REJECT_IF_PATH_TRAVERSAL_DETECTED"
+      },
+      {
+        "rule": "path must be within workspace root",
+        "action": "REJECT_IF_OUTSIDE_WORKSPACE"
+      },
+      {
+        "rule": "plan_hash must match session hash",
+        "action": "REJECT_IF_MISMATCH"
+      },
+      {
+        "rule": "intent must be non-empty",
+        "action": "REJECT_IF_MISSING"
+      }
+    ],
+    "protected_paths": [
+      "/etc/windsurf/",
+      "/usr/local/share/windsurf-hooks/",
+      "/.local/share/windsurf-hooks/",
+      "/root/.codeium/hooks/",
+      "/.ssh",
+      "/.aws",
+      "/etc/passwd",
+      "/etc/shadow",
+      "/root"
+    ]
+  },
+
+  "rpc_envelope_validation": {
+    "enabled": true,
+    "enforcement": "strict",
+    "description": "All MCP calls must be deterministically structured.",
+    "required_structure": {
+      "jsonrpc": "2.0",
+      "method": "tools/call",
+      "params": {
+        "name": "<tool_name_from_whitelist>",
+        "arguments": {}
+      },
+      "id": "<deterministic_id>"
+    },
+    "validation_rules": [
+      {
+        "rule": "Field ordering must be stable",
+        "action": "ENFORCE_CANONICAL_ORDER"
+      },
+      {
+        "rule": "No extra fields allowed",
+        "action": "REJECT_IF_UNKNOWN_FIELDS"
+      },
+      {
+        "rule": "ID must be deterministically generated",
+        "action": "VALIDATE_ID_FORMAT"
+      },
+      {
+        "rule": "Arguments must match tool schema",
+        "action": "VALIDATE_ARGS_SCHEMA"
+      }
+    ]
+  },
+
+  "no_reasoning_in_executor": {
+    "enabled": true,
+    "enforcement": "strict",
+    "description": "Windsurf is not allowed to reason. Scan outgoing payloads for reasoning artifacts.",
+    "forbidden_patterns": [
+      "because",
+      "should",
+      "maybe",
+      "could",
+      "might",
+      "probably",
+      "likely",
+      "explanation",
+      "reasoning",
+      "strategy",
+      "approach",
+      "consider",
+      "suggest",
+      "recommend",
+      "best practice",
+      "for this reason",
+      "in my opinion",
+      "I think",
+      "I believe"
+    ],
+    "scan_targets": [
+      "tool arguments",
+      "write_file content",
+      "prompt responses"
+    ],
+    "action_on_match": "REJECT_TOOL_CALL_AND_AUDIT"
+  },
+
+  "determinism_enforcement": {
+    "enabled": true,
+    "rules": [
+      {
+        "rule": "Session ID generation must be deterministic",
+        "algorithm": "SHA256(plan_hash + timestamp_epoch)"
+      },
+      {
+        "rule": "RPC call IDs must be deterministic",
+        "algorithm": "SHA256(session_id + step_index)"
+      },
+      {
+        "rule": "Step execution must be strictly ordered",
+        "behavior": "No parallel execution, no speculation"
+      },
+      {
+        "rule": "No randomness in decision-making",
+        "behavior": "All branches must be explicit in plan"
+      }
+    ]
+  },
+
+  "audit_trail": {
+    "enabled": true,
+    "enforcement": "mandatory",
+    "capture_at_each_step": [
+      "plan_hash",
+      "step_index",
+      "tool_name",
+      "arguments (sanitized)",
+      "response",
+      "timestamp",
+      "session_id"
+    ],
+    "immutable_storage": true,
+    "tamper_detection": true
+  }
+}
